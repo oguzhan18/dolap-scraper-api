@@ -1,0 +1,23 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "src/main.ts",
+        "use": "@vercel/node"
+      },
+      {
+        "src": "public/swagger-ui-dist/**/*",
+        "use": "@vercel/static"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/api/(.*)",
+        "dest": "src/main.ts"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "/public/swagger-ui-dist/$1"
+      }
+    ]
+  }
