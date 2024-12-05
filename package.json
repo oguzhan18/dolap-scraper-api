@@ -24,7 +24,7 @@
     "@nestjs/common": "^9.0.0",
     "@nestjs/core": "^9.0.0",
     "@nestjs/platform-express": "^9.0.0",
-    "@nestjs/swagger": "^8.0.7",
+    "@nestjs/swagger": "^7.4.0",
     "aws-lambda": "^1.0.7",
     "aws-serverless-express": "^3.4.0",
     "axios": "^1.7.8",

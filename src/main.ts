@@ -8,10 +8,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   const config = new DocumentBuilder()
-  .setTitle('Dolap Scraper API')
-  .setDescription('Dolap ürünlerini scrape eden API')
-  .setVersion('1.0')
-  .build();
+    .setTitle('Dolap Scraper API')
+    .setDescription('Dolap ürünlerini scrape eden API')
+    .setVersion('1.0')
+    .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("api", app, document, {
     customSiteTitle: "Dolap Scraper API",
