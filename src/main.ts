@@ -1,35 +1,29 @@
-import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { NestExpressApplication } from "@nestjs/platform-express";
-import { join } from "path";
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { Server } from 'http';
+import { createServer, proxy } from 'aws-serverless-express';
+import { Callback, Context, Handler } from 'aws-lambda';
 
-async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+let cachedServer: Server;
 
+async function bootstrapServer(): Promise<Server> {
+  const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
-  .setTitle('Dolap Scraper API')
-  .setDescription('Dolap ürünlerini scrape eden API')
-  .setVersion('1.0')
-  .build();
+    .setTitle('Dolap Scraper API')
+    .setDescription('Dolap ürünlerini scrape eden API')
+    .setVersion('1.0')
+    .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api", app, document, {
-    customSiteTitle: "Dolap Scraper API",
-    customfavIcon: "https://raw.githubusercontent.com/oguzhan18/seo-tools-api/main/assests/seo-tools-api-logo.png",
-    customJs: [
-      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.min.js",
-      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-standalone-preset.min.js"
-    ],
-    customCssUrl: [
-      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css",
-      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-standalone-preset.min.css",
-      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.css"
-    ]
-  });
+  SwaggerModule.setup('api', app, document);
 
-  app.useStaticAssets(join(__dirname, "..", "uploads"));
-
-  await app.listen(3000);
+  await app.init();
+  return createServer(app.getHttpAdapter().getInstance());
 }
 
-bootstrap();
+export const handler: Handler = async (event: any, context: Context, callback: Callback) => {
+  if (!cachedServer) {
+    cachedServer = await bootstrapServer();
+  }
+  return proxy(cachedServer, event, context, 'PROMISE').promise;
+};
