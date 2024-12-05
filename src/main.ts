@@ -3,10 +3,17 @@ import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { join } from "path";
+import helmet from "helmet";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.use(helmet({ contentSecurityPolicy: false }));
 
+  // CORS izinlerini aktif et
+  app.enableCors({
+    origin: '*', // Vercel'de sorun yaşamamak için tüm kaynaklara izin ver
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  });
   const config = new DocumentBuilder()
     .setTitle('Dolap Scraper API')
     .setDescription('Dolap ürünlerini scrape eden API')
