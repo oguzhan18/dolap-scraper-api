@@ -23,11 +23,16 @@ export class ScraperService {
                 ]
             });
         } else {
+            // Vercel production
             return await puppeteer.launch({
                 args: [
                     ...chromium.args,
                     '--disable-blink-features=AutomationControlled',
-                    '--disable-dev-shm-usage'
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process'
                 ],
                 executablePath: await chromium.executablePath(),
                 headless: true,
@@ -179,29 +184,34 @@ export class ScraperService {
 
             const userProfile: UserProfileDto = new UserProfileDto();
 
-            const profileImage = $('.clipImage-image').attr('xlink:href');
-            userProfile.profileImageUrl = profileImage || null;
+            // Kullanıcı adını breadcrumb'dan al
+            const userNameFromBreadcrumb = $('.breadcrumb li').last().text().trim().replace('@', '');
+            userProfile.userName = userNameFromBreadcrumb || null;
 
-            const userName = $('.main-profile-block .title-block h1').text().trim();
-            userProfile.userName = userName || null;
+            // Profil resmini style tag'inden al
+            const styleContent = $('style').text();
+            const memberIdMatch = styleContent.match(/#member(\d+)\{background-image:\s*url\("([^"]+)"\)/);
+            if (memberIdMatch && memberIdMatch[2]) {
+                userProfile.profileImageUrl = memberIdMatch[2];
+            } else {
+                userProfile.profileImageUrl = null;
+            }
 
-            const lastActive = $('.main-profile-block .title-block .time').text().trim();
-            userProfile.lastActive = lastActive || null;
+            // Ürün sayısını al
+            const productCountText = $('.title-block .subtitle').first().text().trim();
+            const productCountMatch = productCountText.match(/(\d+)/);
+            const productCount = productCountMatch ? parseInt(productCountMatch[1]) : 0;
 
-            const ratingInfo = $('.main-profile-block .stars-block .likes-info').first().text().trim();
-            userProfile.ratingInfo = ratingInfo || null;
-
-            const followers = $('.main-profile-block .followers-list li').first().find('strong').text().trim();
-            const following = $('.main-profile-block .followers-list li').last().find('strong').text().trim();
-            userProfile.followers = parseInt(followers) || 0;
-            userProfile.following = parseInt(following) || 0;
-
-            const userDescription = $('.main-profile-block .text-block p').text().trim();
-            userProfile.description = userDescription || null;
+            userProfile.lastActive = null;
+            userProfile.ratingInfo = `${productCount} Ürün`;
+            userProfile.followers = 0;
+            userProfile.following = 0;
+            userProfile.description = null;
 
             userProfile.products = [];
 
-            $('.four-cols .col-xs-6.col-md-3').each((i, element) => {
+            // Profil sayfasında col-md-4 kullanılıyor
+            $('.four-cols .col-xs-6.col-md-4').each((i, element) => {
                 const product: ProductDto = new ProductDto();
 
                 const productTitle = $(element).find('.detail-footer .title-info-block .title').text().trim();
@@ -226,6 +236,15 @@ export class ScraperService {
                 const commentsText = $(element).find('.like-comment-list .comment .numbers').text().trim();
                 const comments = parseInt(commentsText) || 0;
                 product.comments = comments;
+
+                const sellerName = $(element).find('.detail-head .title-stars-block .title').text().trim();
+                product.sellerName = sellerName || null;
+
+                const stars = $(element).find('.detail-head .stars-holder .icon-star').length;
+                product.sellerStars = stars;
+
+                const profileLink = $(element).find('.detail-head .img-title-block a').attr('href');
+                product.profileUrl = profileLink || null;
 
                 userProfile.products.push(product);
             });
