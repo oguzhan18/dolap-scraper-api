@@ -1,23 +1,84 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { ProductDto, UserProfileDto } from './dto/product.dto';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 @Injectable()
 export class ScraperService {
+    private async getBrowser() {
+        const isDev = process.env.NODE_ENV !== 'production';
+        
+        if (isDev) {
+            return await puppeteer.launch({
+                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--disable-web-security',
+                    '--disable-features=IsolateOrigins,site-per-process'
+                ]
+            });
+        } else {
+            return await puppeteer.launch({
+                args: [
+                    ...chromium.args,
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage'
+                ],
+                executablePath: await chromium.executablePath(),
+                headless: true,
+            });
+        }
+    }
+
+    private async getPageContent(url: string): Promise<string> {
+        const browser = await this.getBrowser();
+        try {
+            const page = await browser.newPage();
+            
+            await page.evaluateOnNewDocument(() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => false });
+            });
+            
+            await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            });
+            
+            await page.goto(url, { 
+                waitUntil: 'domcontentloaded',
+                timeout: 60000 
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            const content = await page.content();
+            return content;
+        } finally {
+            await browser.close();
+        }
+    }
 
     async scrapeProductList(url: string): Promise<ProductDto[]> {
         try {
-            const { data } = await axios.get(url);
+            const data = await this.getPageContent(url);
             const $ = cheerio.load(data);
 
             const products: ProductDto[] = [];
 
-            $('.four-cols .col-xs-6.col-md-4').each((i, element) => {
+            $('.four-cols .col-xs-6.col-md-3').each((i, element) => {
                 const product: ProductDto = new ProductDto();
 
                 const profileLink = $(element).find('.detail-head .img-title-block a').attr('href');
-                product.profileUrl = profileLink ? `https://dolap.com${profileLink}` : null;
+                product.profileUrl = profileLink || null;
 
                 const sellerName = $(element).find('.detail-head .title-stars-block .title').text().trim();
                 product.sellerName = sellerName || null;
@@ -25,11 +86,13 @@ export class ScraperService {
                 const stars = $(element).find('.detail-head .stars-holder .icon-star').length;
                 product.sellerStars = stars;
 
-                const imgSrc = $(element).find('.img-block img').attr('src');
-                product.productImage = imgSrc || null;
+                const imgDiv = $(element).find('.img-block .bgstretch');
+                const imgStyle = imgDiv.attr('style');
+                const imgId = imgDiv.attr('id');
+                product.productImage = imgId || imgStyle || null;
 
                 const productLink = $(element).find('.img-block a').attr('href');
-                product.productUrl = productLink ? productLink : null;
+                product.productUrl = productLink || null;
 
                 const productTitle = $(element).find('.detail-footer .title-info-block .title').text().trim();
                 const productDetail = $(element).find('.detail-footer .title-info-block .detail').text().trim();
@@ -52,12 +115,13 @@ export class ScraperService {
 
             return products;
         } catch (error) {
-            throw new HttpException('Ürün listesi çekilirken bir hata oluştu.', HttpStatus.INTERNAL_SERVER_ERROR);
+            console.error('Scrape error:', error);
+            throw new HttpException(`Ürün listesi çekilirken bir hata oluştu: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async scrapeProduct(url: string) {
         try {
-            const { data } = await axios.get(url);
+            const data = await this.getPageContent(url);
             const $ = cheerio.load(data);
 
             const images = [];
@@ -103,13 +167,14 @@ export class ScraperService {
                 comments,
             };
         } catch (error) {
-            throw new Error('Ürün bilgileri çekilirken bir hata oluştu.');
+            console.error('Scrape product error:', error);
+            throw new HttpException(`Ürün bilgileri çekilirken bir hata oluştu: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     async scrapeUserProfile(url: string): Promise<UserProfileDto> {
         try {
-            const { data } = await axios.get(url);
+            const data = await this.getPageContent(url);
             const $ = cheerio.load(data);
 
             const userProfile: UserProfileDto = new UserProfileDto();
@@ -136,7 +201,7 @@ export class ScraperService {
 
             userProfile.products = [];
 
-            $('.four-cols .col-xs-6.col-md-4').each((i, element) => {
+            $('.four-cols .col-xs-6.col-md-3').each((i, element) => {
                 const product: ProductDto = new ProductDto();
 
                 const productTitle = $(element).find('.detail-footer .title-info-block .title').text().trim();
@@ -147,11 +212,12 @@ export class ScraperService {
                 const price = $(element).find('.detail-footer .price-detail .price').text().trim();
                 product.price = price || null;
 
-                const imgSrc = $(element).find('.img-block img').attr('src');
-                product.productImage = imgSrc || null;
+                const imgDiv = $(element).find('.img-block .bgstretch');
+                const imgId = imgDiv.attr('id');
+                product.productImage = imgId || null;
 
                 const productLink = $(element).find('.img-block a').attr('href');
-                product.productUrl = productLink ? productLink : null;
+                product.productUrl = productLink || null;
 
                 const likesText = $(element).find('.like-comment-list .like .numbers').text().trim();
                 const likes = parseInt(likesText) || 0;
@@ -166,7 +232,8 @@ export class ScraperService {
 
             return userProfile;
         } catch (error) {
-            throw new HttpException('Kullanıcı profili çekilirken bir hata oluştu.', HttpStatus.INTERNAL_SERVER_ERROR);
+            console.error('Scrape user profile error:', error);
+            throw new HttpException(`Kullanıcı profili çekilirken bir hata oluştu: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
