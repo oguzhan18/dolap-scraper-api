@@ -6,11 +6,18 @@ import chromium from '@sparticuz/chromium';
 
 @Injectable()
 export class ScraperService {
+    private browserInstance: any = null;
+
     private async getBrowser() {
+        // Mevcut browser varsa ve çalışıyorsa onu kullan
+        if (this.browserInstance && this.browserInstance.isConnected()) {
+            return this.browserInstance;
+        }
+
         const isDev = process.env.NODE_ENV !== 'production';
         
         if (isDev) {
-            return await puppeteer.launch({
+            this.browserInstance = await puppeteer.launch({
                 executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 headless: true,
                 args: [
@@ -23,8 +30,10 @@ export class ScraperService {
                 ]
             });
         } else {
-            // Vercel production
-            return await puppeteer.launch({
+            // Vercel production - optimize for speed
+            chromium.setGraphicsMode = false;
+            
+            this.browserInstance = await puppeteer.launch({
                 args: [
                     ...chromium.args,
                     '--disable-blink-features=AutomationControlled',
@@ -32,19 +41,23 @@ export class ScraperService {
                     '--disable-gpu',
                     '--no-first-run',
                     '--no-zygote',
-                    '--single-process'
+                    '--single-process',
+                    '--disable-features=AudioServiceOutOfProcess',
+                    '--disable-software-rasterizer'
                 ],
                 executablePath: await chromium.executablePath(),
                 headless: true,
             });
         }
+
+        return this.browserInstance;
     }
 
     private async getPageContent(url: string): Promise<string> {
         const browser = await this.getBrowser();
+        const page = await browser.newPage();
+        
         try {
-            const page = await browser.newPage();
-            
             await page.evaluateOnNewDocument(() => {
                 Object.defineProperty(navigator, 'webdriver', { get: () => false });
             });
@@ -60,15 +73,15 @@ export class ScraperService {
             
             await page.goto(url, { 
                 waitUntil: 'domcontentloaded',
-                timeout: 60000 
+                timeout: 30000 
             });
             
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             const content = await page.content();
             return content;
         } finally {
-            await browser.close();
+            await page.close();
         }
     }
 
