@@ -32,6 +32,8 @@
     "cheerio": "^1.0.0",
     "helmet": "^8.0.0",
     "puppeteer-core": "^24.36.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0",

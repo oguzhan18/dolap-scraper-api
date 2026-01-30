@@ -1,8 +1,11 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import { ProductDto, UserProfileDto } from './dto/product.dto';
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import chromium from '@sparticuz/chromium';
+
+puppeteer.use(StealthPlugin());
 
 @Injectable()
 export class ScraperService {
@@ -23,10 +26,7 @@ export class ScraperService {
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
-                    '--disable-blink-features=AutomationControlled',
                     '--disable-dev-shm-usage',
-                    '--disable-web-security',
-                    '--disable-features=IsolateOrigins,site-per-process'
                 ]
             });
         } else {
@@ -36,14 +36,11 @@ export class ScraperService {
             this.browserInstance = await puppeteer.launch({
                 args: [
                     ...chromium.args,
-                    '--disable-blink-features=AutomationControlled',
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
                     '--no-first-run',
                     '--no-zygote',
                     '--single-process',
-                    '--disable-features=AudioServiceOutOfProcess',
-                    '--disable-software-rasterizer'
                 ],
                 executablePath: await chromium.executablePath(),
                 headless: true,
@@ -58,25 +55,14 @@ export class ScraperService {
         const page = await browser.newPage();
         
         try {
-            await page.evaluateOnNewDocument(() => {
-                Object.defineProperty(navigator, 'webdriver', { get: () => false });
-            });
-            
             await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            await page.setExtraHTTPHeaders({
-                'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            });
             
             await page.goto(url, { 
                 waitUntil: 'domcontentloaded',
-                timeout: 30000 
+                timeout: 25000 
             });
             
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 1500));
             
             const content = await page.content();
             return content;
