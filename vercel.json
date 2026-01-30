@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "dist/main.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
   "routes": [
@@ -11,11 +14,5 @@
       "src": "/(.*)",
       "dest": "dist/main.js"
     }
-  ],
-  "functions": {
-    "dist/main.js": {
-      "memory": 3008,
-      "maxDuration": 60
-    }
-  }
+  ]
 }
