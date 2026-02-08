@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ProductDto {
-  @ApiProperty({ description: 'Satıcının profil URL\'si' })
+  @ApiProperty({ description: "Satıcının profil URL'si" })
   profileUrl: string;
 
   @ApiProperty({ description: 'Satıcının adı' })
@@ -10,10 +10,10 @@ export class ProductDto {
   @ApiProperty({ description: 'Satıcının yıldız sayısı' })
   sellerStars: number;
 
-  @ApiProperty({ description: 'Ürün resim URL\'si' })
+  @ApiProperty({ description: "Ürün resim URL'si" })
   productImage: string;
 
-  @ApiProperty({ description: 'Ürün sayfası URL\'si' })
+  @ApiProperty({ description: "Ürün sayfası URL'si" })
   productUrl: string;
 
   @ApiProperty({ description: 'Ürün başlığı' })
@@ -32,9 +32,8 @@ export class ProductDto {
   comments: number;
 }
 
-
 export class UserProfileDto {
-  @ApiProperty({ description: 'Profil resmi URL\'si' })
+  @ApiProperty({ description: "Profil resmi URL'si" })
   profileImageUrl: string;
 
   @ApiProperty({ description: 'Kullanıcı adı' })

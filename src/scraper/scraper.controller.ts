@@ -10,7 +10,11 @@ export class ScraperController {
 
   @Get()
   @ApiOperation({ summary: 'Tek bir ürün sayfasını scrape eder' })
-  @ApiQuery({ name: 'url', required: true, description: 'Ürün sayfasının URL\'si' })
+  @ApiQuery({
+    name: 'url',
+    required: true,
+    description: "Ürün sayfasının URL'si",
+  })
   async scrape(@Query('url') url: string) {
     if (!url) {
       throw new BadRequestException('URL parametresi gereklidir.');
@@ -20,8 +24,16 @@ export class ScraperController {
 
   @Get('list')
   @ApiOperation({ summary: 'Ürün listesi sayfasını scrape eder' })
-  @ApiQuery({ name: 'url', required: true, description: 'Ürün listesi sayfasının URL\'si' })
-  @ApiResponse({ status: 200, description: 'Ürün listesi başarıyla çekildi.', type: [ProductDto] })
+  @ApiQuery({
+    name: 'url',
+    required: true,
+    description: "Ürün listesi sayfasının URL'si",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Ürün listesi başarıyla çekildi.',
+    type: [ProductDto],
+  })
   async scrapeList(@Query('url') url: string): Promise<ProductDto[]> {
     if (!url) {
       throw new BadRequestException('URL parametresi gereklidir.');
@@ -31,8 +43,16 @@ export class ScraperController {
 
   @Get('user')
   @ApiOperation({ summary: 'Kullanıcı profil sayfasını scrape eder' })
-  @ApiQuery({ name: 'url', required: true, description: 'Kullanıcı profil sayfasının URL\'si' })
-  @ApiResponse({ status: 200, description: 'Kullanıcı profili başarıyla çekildi.', type: UserProfileDto })
+  @ApiQuery({
+    name: 'url',
+    required: true,
+    description: "Kullanıcı profil sayfasının URL'si",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Kullanıcı profili başarıyla çekildi.',
+    type: UserProfileDto,
+  })
   async scrapeUser(@Query('url') url: string): Promise<UserProfileDto> {
     if (!url) {
       throw new BadRequestException('URL parametresi gereklidir.');
