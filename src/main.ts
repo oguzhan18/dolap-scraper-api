@@ -5,13 +5,12 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import helmet from 'helmet';
 
-async function bootstrap() {
+export async function createApp(): Promise<NestExpressApplication> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.use(helmet({ contentSecurityPolicy: false }));
 
-  // CORS izinlerini aktif et
   app.enableCors({
-    origin: '*', // Vercel'de sorun yaşamamak için tüm kaynaklara izin ver
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   });
   const config = new DocumentBuilder()
@@ -37,7 +36,14 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'uploads'));
 
+  return app;
+}
+
+async function bootstrap() {
+  const app = await createApp();
   await app.listen(process.env.PORT ?? 3000);
 }
 
-bootstrap();
+if (process.env.VERCEL !== '1') {
+  bootstrap();
+}
